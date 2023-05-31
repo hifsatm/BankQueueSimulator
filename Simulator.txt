@@ -1,0 +1,261 @@
+import java.util.*;
+import java.util.LinkedList;    
+import java.util.Random;  
+import java.util.Scanner;  
+import java.time.format.DateTimeFormatter;  
+import java.time.LocalDateTime;  
+import java.time.Instant;  
+import java.time.Duration;
+
+
+public class Simulator
+{    
+   public static void main(String[] args) throws Exception    
+   {        
+      Simulator sim = new Simulator();        
+      sim.start();    
+   }    
+ 
+public void start() throws Exception    
+{      
+   Scanner console = new Scanner(System.in);  
+   
+   long time1=0; //we initialize three long time variables so we can later calculate the total service time per queue
+   long time2=0;         
+   long time3=0;
+   int q1=0;     //we initialize three variable to 0, later, we increment them to count the number of clients served in each queue
+   int q2=0;   
+   int q3=0;        
+
+   int runningTime;   //asks the user to enter total running time of the simulation in minutes    
+   int numOfQueues;   //asks the user to input max 3 queues.
+             
+   System.out.println("Enter total simulation time in minutes: ");      
+   runningTime = console.nextInt();                      
+   System.out.println("Enter number of queues (max 3): ");        
+   numOfQueues = console.nextInt(); 
+   System.out.println();                      
+   System.out.println("Total Simulation Time: " + (runningTime*60));  //we get the total simulation time in seconds here  
+                         
+   LinkedList<queue<Client>> lnkList = new LinkedList<>();    //we created a linked list for the queue  
+   int start = 1;                                             //to start the clients entering from 1
+   long endTime = Com.getSeconds() + (runningTime*60);        //the time to stop
+   long runTime = Com.getSeconds();                           //the time to run
+   for(int i=0; i< numOfQueues; i++)        
+   {            
+      lnkList.add(new queue<Client>(i+1));     //we will have our queues
+   }                    
+                            
+   while(endTime > Com.getSeconds())           //main loop
+   {            
+      if(runTime < Com.getSeconds())           
+      {                
+         long secToArrive = Com.getArrivalsFreq();               
+         runTime = runTime + secToArrive;                              
+         queue<Client> cQueue = lnkList.get(0);                            
+         for(int i=1; i<lnkList.size(); i++)                
+         {                    
+            if(lnkList.get(i).size() < cQueue.size())                        
+            cQueue = lnkList.get(i);                
+         }                                
+         long time;                
+         Client cl = cQueue.first();                
+         if(cl == null)                
+         { time =0; }              
+         else                
+         { time = cl.getServiceTime() - Com.getSeconds(); }      //getServiceTime from client class
+                                       
+      long servTimeClient= Com.getClientServiceTime();           //to generate the service time per client     
+      long servTime = Com.getSeconds()+ time + servTimeClient;   //to get the total service time            
+           
+      Client c = new Client(start, servTime, Com.getSeconds());  //for each client we take their start ID, service time and seconds                                              
+      cQueue.enqueue(c);                                         //clients are entering the queue  
+                         
+      System.out.println(Com.getTime() + " Client " + start + " ARRIVED and joined queue " + cQueue.getQueueNum() + 
+                     " with service time "+ servTimeClient +" seconds");
+      start++;      //increment the client number so it increses as the loop repeats
+   
+      //we will create a condition to calculate how many clients were served by each queue
+      if (cQueue.getQueueNum()==1)
+      { q1++;  }
+      else if (cQueue.getQueueNum()==2)
+      { q2++;  }
+      else if (cQueue.getQueueNum()==3)
+      { q3++;  }
+      }            
+      else            //now we will find out after how many seconds the client was served 
+      { for(int i=0; i<numOfQueues; i++)               
+      {                    
+         Client cC = lnkList.get(i).first();                  
+         if(cC  != null)          
+         {                        
+            if(cC.getServiceTime() < Com.getSeconds())                      
+            {                            
+               long servedTime =Com.getSeconds() - cC.getArrivalTime();    
+               
+               //we will create a switch condition to get the total served time for each of the 3 queues individually             
+               switch(i)
+               {
+                     case 0:
+                  lnkList.get(0).first().setServiceTime(servedTime);
+                  time1 = time1 + lnkList.get(0).first().getServiceTime();
+                     break;
+                     case 1:
+                  lnkList.get(1).first().setServiceTime(servedTime);
+                  time2 = time2 + lnkList.get(1).first().getServiceTime();
+                     break;
+                     case 2:
+                  lnkList.get(2).first().setServiceTime(servedTime);
+                  time3 = time3 +lnkList.get(2).first().getServiceTime();
+            }
+                    
+               lnkList.get(i).dequeue();   //to dequeue the first client after its served, it keeps removing clients until all are served
+                  
+               System.out.println();                      
+               System.out.println(Com.getTime() + " Client " + cC.getClientNum() + " was SERVED after " + 
+                                             servedTime + " seconds");
+            }                    
+         }                
+      }            
+      }                        
+   Thread.sleep(1000);   //we use this method to suspend the program for one second  
+   }             
+   System.out.println();   
+   System.out.println("Closing,,,serving clients in queues");     //not taking anymore new clients
+   System.out.println(); 
+            
+   while(true)           //now we will serve the clients that are already in the queue
+   {            
+      boolean found = false;      //first we will check if there is any client in the queue                   
+      for(int i=0; i<numOfQueues; i++)                
+      {                    
+         Client cC = lnkList.get(i).first();                                        
+         if(cC != null)                    
+         { found = true;                        
+         if(cC.getServiceTime() < Com.getSeconds())                        
+         {                            
+            long servedTime = Com.getSeconds() - cC.getArrivalTime();   
+            
+            /*we will repeat the same switch statement as the top so we can get the individual total service 
+            time per queue for the clients that have entered and are yet to be served after closing  */           
+            switch(i)
+            {
+                  case 0:
+               lnkList.get(0).first().setServiceTime(servedTime);
+               time1 = time1 + lnkList.get(0).first().getServiceTime();
+                  break;
+                  case 1:
+               lnkList.get(1).first().setServiceTime(servedTime);
+               time2 = time2 + lnkList.get(1).first().getServiceTime();
+                  break;
+                  case 2:
+               lnkList.get(2).first().setServiceTime(servedTime);
+               time3 = time3 +lnkList.get(2).first().getServiceTime();
+            }
+            
+         lnkList.get(i).dequeue();             //we dequeue the clients that have been served.              
+         System.out.println(Com.getTime() + " Client " + cC.getClientNum() + " was SERVED after " 
+                                    + servedTime + " seconds");  
+         }                    
+         }                
+      }
+                       
+      if(!found)            //if there isn't any client present then we will break the loop
+      { break; }            
+   Thread.sleep(1000);        
+   }  //close this method
+   
+   //now we get the data for each queue, sum of clients and average service time.                           
+   int sumOfQueues =  (q1+q2+q3);
+   double avgServTime= (time1+time2+time3)/(sumOfQueues);
+   
+   System.out.println();
+   System.out.println("Queue 1 served clients " + q1 + " ,total service time is " + time1 + " seconds" );  
+   System.out.println("Queue 2 served clients " + q2 + " ,total service time is " + time2 + " seconds" );  
+   System.out.println("Queue 3 served clients " + q3 + " ,total service time is " + time3 + " seconds" ); 
+   System.out.println(); 
+
+   System.out.println("Total served clients: "+ (sumOfQueues));  
+   System.out.println("Average service time: " + avgServTime + " (" + String.format("%.2f", avgServTime/60) + " minutes)");
+   }
+} 
+ 
+class Com {             //Utility class provided in the project specifications
+   public static DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");    
+   public static String getTime()               { return dtf.format(LocalDateTime.now()); }            
+   public static Random random = new Random();      
+   public static long random(int min, int max)  { long rand = (long)random.nextInt(max-min+1)+min;  return rand; }    
+   public static long getSeconds()              { return Instant.now().getEpochSecond();  }            
+   public static long getArrivalsFreq()         { return random(5, 30);   }        
+   public static long getClientServiceTime()    { return random(2, 5)*60; }
+} 
+
+class queue<Client>     //this class represents the lane of clients waiting to be served.
+{      
+   private Queue<Client> cQueue;        
+   private int queueNum;
+   private int size;
+       
+   public queue(int qN) //constructor
+   {        
+      cQueue = new LinkedList<Client>();               
+      queueNum = qN;
+      size = 0;        
+   }  
+   public Client first()           //retrieves the head of the queue
+   {  return cQueue.peek();    }
+             
+   public void enqueue(Client ccc) //adds element to the list 
+   {        
+      cQueue.add(ccc);        
+      size++;    
+   }        
+   public void dequeue()           //removes first element of the list.
+   {        
+      cQueue.remove();        
+      size--;    
+   }   
+                 
+   public int getQueueNum()         //gets the number of the queue.
+   {  return queueNum;  } 
+        
+   public void setQueueNum(int qN)  //sets the number of the queue.
+   {  queueNum=qN;      } 
+   
+   public int size()                //returns the number of elements in the list.
+   {  return size;      } 
+}
+ 
+class Client                        // a class that represent the clients being served in turn in the queues
+{ 
+   private int clientNum;           //provide the number of the client
+   private long serviceTime;        //to get the service time of clients
+   private long arrivalTime;        //to get arrival time of clients
+       
+   public Client(int cNum, long sT, long aT)   //constructor 
+   {        
+      clientNum = cNum;        
+      serviceTime = sT;     
+      arrivalTime = aT;         
+   }
+       
+   public int getClientNum()        //get and set methods for the three variables initialized.
+   { return clientNum;    }
+    
+   public void setClientNum(int setCN)
+   { clientNum = setCN;   }
+   
+   public void setServiceTime(long setST)
+   { serviceTime =setST;  }
+   
+   public long getServiceTime()    
+   { return serviceTime;  } 
+         
+   public void setArrivalTime(long setAT)
+   { arrivalTime =setAT ; }
+   
+   public long getArrivalTime()    
+   { return arrivalTime;  }
+}
+
+
